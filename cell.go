@@ -325,7 +325,7 @@ func (f *File) SetCellFormula(sheet, axis, formula string) {
 // hyperlink "External" for web site or "Location" for moving to one of cell
 // in this workbook. The below is example for external link.
 //
-//    xlsx.SetCellHyperLink("Sheet1", "A3", "https://github.com/360EntSecGroup-Skylar/excelize", "External")
+//    xlsx.SetCellHyperLink("Sheet1", "A3", "https://github.com/wfxiang08/excelize", "External")
 //    // Set underline and font color style for the cell.
 //    style, _ := xlsx.NewStyle(`{"font":{"color":"#1265BE","underline":"single"}}`)
 //    xlsx.SetCellStyle("Sheet1", "A3", "A3", style)
@@ -337,6 +337,7 @@ func (f *File) SetCellFormula(sheet, axis, formula string) {
 func (f *File) SetCellHyperLink(sheet, axis, link, linkType string) {
 	xlsx := f.workSheetReader(sheet)
 	axis = f.mergeCellsParser(xlsx, axis)
+	// 现在只处理: External和Location两种情况
 	linkTypes := map[string]xlsxHyperlink{
 		"External": {},
 		"Location": {Location: link},
@@ -390,8 +391,9 @@ func (f *File) GetCellHyperLink(sheet, axis string) (bool, string) {
 //    xlsx.MergeCell("Sheet1", "D3", "E9")
 //
 // If you create a merged cell that overlaps with another existing merged cell,
-// those merged cells that already exist will be removed.
+// those merged cells that already exist will be removed. 已有的MergedCells会被删除
 func (f *File) MergeCell(sheet, hcell, vcell string) {
+	// 同一个cell, 不支持Merge操作
 	if hcell == vcell {
 		return
 	}
@@ -410,6 +412,7 @@ func (f *File) MergeCell(sheet, hcell, vcell string) {
 	vyAxis := vrow - 1
 	vxAxis := TitleToNumber(vcol)
 
+	// 只关注区间，不关注相对大小
 	if vxAxis < hxAxis {
 		hcell, vcell = vcell, hcell
 		vxAxis, hxAxis = hxAxis, vxAxis

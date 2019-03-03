@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"log"
 )
 
 func TestOpenFile(t *testing.T) {
@@ -130,7 +131,9 @@ func TestOpenFile(t *testing.T) {
 	assert.NoError(t, xlsx.SaveAs(filepath.Join("test", "TestOpenFile.xlsx")))
 }
 
+// go test -v -run "TestSaveFile"
 func TestSaveFile(t *testing.T) {
+	// 打开，测试SaveAs；再打开，再Save
 	xlsx, err := OpenFile(filepath.Join("test", "Book1.xlsx"))
 	if !assert.NoError(t, err) {
 		t.FailNow()
@@ -141,8 +144,10 @@ func TestSaveFile(t *testing.T) {
 		t.FailNow()
 	}
 	assert.NoError(t, xlsx.Save())
+
 }
 
+// go test -v -run "TestSaveAsWrongPath"
 func TestSaveAsWrongPath(t *testing.T) {
 	xlsx, err := OpenFile(filepath.Join("test", "Book1.xlsx"))
 	if assert.NoError(t, err) {
@@ -169,7 +174,7 @@ func TestAddPicture(t *testing.T) {
 
 	// Test add picture to worksheet with offset, external hyperlink and positioning.
 	err = xlsx.AddPicture("Sheet1", "F21", filepath.Join("test", "images", "excel.jpg"),
-		`{"x_offset": 10, "y_offset": 10, "hyperlink": "https://github.com/360EntSecGroup-Skylar/excelize", "hyperlink_type": "External", "positioning": "oneCell"}`)
+		`{"x_offset": 10, "y_offset": 10, "hyperlink": "https://github.com/wfxiang08/excelize", "hyperlink_type": "External", "positioning": "oneCell"}`)
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
@@ -274,12 +279,20 @@ func TestNewFile(t *testing.T) {
 	assert.NoError(t, xlsx.SaveAs(filepath.Join("test", "TestNewFile.xlsx")))
 }
 
+// go test -v -run "TestColWidth"
 func TestColWidth(t *testing.T) {
 	xlsx := NewFile()
-	xlsx.SetColWidth("Sheet1", "B", "A", 12)
-	xlsx.SetColWidth("Sheet1", "A", "B", 12)
-	xlsx.GetColWidth("Sheet1", "A")
-	xlsx.GetColWidth("Sheet1", "C")
+	xlsx.SetColWidth("Sheet1", "B", "A", 40)
+	v1 := xlsx.GetColWidth("Sheet1", "A")
+	log.Printf("ColWidth, A: %.3f", v1)
+
+	xlsx.SetColWidth("Sheet1", "A", "B", 40)
+	v1 = xlsx.GetColWidth("Sheet1", "A")
+	log.Printf("ColWidth, A: %.3f", v1)
+
+	v1 = xlsx.GetColWidth("Sheet1", "A")
+	v2 := xlsx.GetColWidth("Sheet1", "C") // 如果没有设置，返回默认的大小?
+	log.Printf("ColWidth, A: %.3f, C: %.3f", v1, v2)
 	err := xlsx.SaveAs(filepath.Join("test", "TestColWidth.xlsx"))
 	if err != nil {
 		t.Error(err)
@@ -287,6 +300,7 @@ func TestColWidth(t *testing.T) {
 	convertRowHeightToPixels(0)
 }
 
+// go test -v -run "TestRowHeight"
 func TestRowHeight(t *testing.T) {
 	xlsx := NewFile()
 	xlsx.SetRowHeight("Sheet1", 1, 50)
@@ -300,29 +314,37 @@ func TestRowHeight(t *testing.T) {
 	convertColWidthToPixels(0)
 }
 
+// go test -v -run "TestSetCellHyperLink"
 func TestSetCellHyperLink(t *testing.T) {
 	xlsx, err := OpenFile(filepath.Join("test", "Book1.xlsx"))
 	if err != nil {
 		t.Log(err)
 	}
+
+	// 为已有的数据添加或设置HyperLink
 	// Test set cell hyperlink in a work sheet already have hyperlinks.
-	xlsx.SetCellHyperLink("Sheet1", "B19", "https://github.com/360EntSecGroup-Skylar/excelize", "External")
+	xlsx.SetCellHyperLink("Sheet1", "B19", "https://github.com/wfxiang08/excelize", "External")
 	// Test add first hyperlink in a work sheet.
-	xlsx.SetCellHyperLink("Sheet2", "C1", "https://github.com/360EntSecGroup-Skylar/excelize", "External")
+	xlsx.SetCellHyperLink("Sheet2", "C1", "https://github.com/wfxiang08/excelize", "External")
+
 	// Test add Location hyperlink in a work sheet.
+	// 现在只处理: External和Location两种情况
 	xlsx.SetCellHyperLink("Sheet2", "D6", "Sheet1!D8", "Location")
-	xlsx.SetCellHyperLink("Sheet2", "C3", "Sheet1!D8", "")
-	xlsx.SetCellHyperLink("Sheet2", "", "Sheet1!D60", "Location")
+	xlsx.SetCellHyperLink("Sheet2", "C3", "Sheet1!D8", "")        // 无效的设置
+	xlsx.SetCellHyperLink("Sheet2", "", "Sheet1!D60", "Location") // 无效的axis
 	assert.NoError(t, xlsx.SaveAs(filepath.Join("test", "TestSetCellHyperLink.xlsx")))
 }
 
+// go test -v -run "TestGetCellHyperLink"
 func TestGetCellHyperLink(t *testing.T) {
 	xlsx, err := OpenFile(filepath.Join("test", "Book1.xlsx"))
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
 
+	// 读取link
 	link, target := xlsx.GetCellHyperLink("Sheet1", "")
+
 	t.Log(link, target)
 	link, target = xlsx.GetCellHyperLink("Sheet1", "A22")
 	t.Log(link, target)
@@ -332,14 +354,17 @@ func TestGetCellHyperLink(t *testing.T) {
 	t.Log(link, target)
 }
 
+// go test -v -run "TestSetCellFormula"
 func TestSetCellFormula(t *testing.T) {
 	xlsx, err := OpenFile(filepath.Join("test", "Book1.xlsx"))
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
 
+	// 使用求和公式
 	xlsx.SetCellFormula("Sheet1", "B19", "SUM(Sheet2!D2,Sheet2!D11)")
 	xlsx.SetCellFormula("Sheet1", "C19", "SUM(Sheet2!D2,Sheet2!D9)")
+
 	// Test set cell formula with illegal rows number.
 	xlsx.SetCellFormula("Sheet1", "C", "SUM(Sheet2!D2,Sheet2!D9)")
 	assert.NoError(t, xlsx.SaveAs(filepath.Join("test", "TestSetCellFormula1.xlsx")))
@@ -390,6 +415,7 @@ func TestSetSheetBackgroundErrors(t *testing.T) {
 	assert.EqualError(t, err, "unsupported image extension")
 }
 
+// go test -v -run "TestMergeCell"
 func TestMergeCell(t *testing.T) {
 	xlsx, err := OpenFile(filepath.Join("test", "Book1.xlsx"))
 	if !assert.NoError(t, err) {
@@ -402,12 +428,13 @@ func TestMergeCell(t *testing.T) {
 	xlsx.MergeCell("Sheet1", "C9", "D8")
 	xlsx.MergeCell("Sheet1", "F11", "G13")
 	xlsx.MergeCell("Sheet1", "H7", "B15")
-	xlsx.MergeCell("Sheet1", "D11", "F13")
-	xlsx.MergeCell("Sheet1", "G10", "K12")
+	xlsx.MergeCell("Sheet1", "D11", "F13") // Confirm
+	xlsx.MergeCell("Sheet1", "G10", "K12") // 最后的Merged指令才生效
+
 	xlsx.SetCellValue("Sheet1", "G11", "set value in merged cell")
 	xlsx.SetCellInt("Sheet1", "H11", 100)
 	xlsx.SetCellValue("Sheet1", "I11", float64(0.5))
-	xlsx.SetCellHyperLink("Sheet1", "J11", "https://github.com/360EntSecGroup-Skylar/excelize", "External")
+	xlsx.SetCellHyperLink("Sheet1", "J11", "https://github.com/wfxiang08/excelize", "External")
 	xlsx.SetCellFormula("Sheet1", "G12", "SUM(Sheet1!B19,Sheet1!C19)")
 	xlsx.GetCellValue("Sheet1", "H11")
 	xlsx.GetCellValue("Sheet2", "A6") // Merged cell ref is single coordinate.
@@ -469,8 +496,10 @@ func TestGetMergeCells(t *testing.T) {
 	}
 }
 
+// go test -v -run "TestSetCellStyleAlignment"
+// 如何设置Cell的样式，编程实现即可?
 func TestSetCellStyleAlignment(t *testing.T) {
-	xlsx, err := prepareTestBook1()
+	xlsx, err := OpenFile(filepath.Join("test", "Book2.xlsx"))
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
@@ -548,19 +577,31 @@ func TestSetCellStyleBorderErrors(t *testing.T) {
 	}
 }
 
+// go test -v -run "TestSetCellStyleNumberFormat"
 func TestSetCellStyleNumberFormat(t *testing.T) {
-	xlsx, err := prepareTestBook1()
+	xlsx, err := OpenFile(filepath.Join("test", "Book2.xlsx"))
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
+	xlsx.NewSheet("Sheet2")
+	xlsx.SetActiveSheet(2)
 
 	// Test only set fill and number format for a cell.
 	col := []string{"L", "M", "N", "O", "P"}
+	// 似乎和 参考: https://python-pptx.readthedocs.io/en/latest/api/enum/ExcelNumFormat.html 一致
+	// 注意data中的数值不是连续的
 	data := []int{0, 1, 2, 3, 4, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49}
+
 	value := []string{"37947.7500001", "-37947.7500001", "0.007", "2.1", "String"}
 	for i, v := range value {
 		for k, d := range data {
+			// 指定位置: c
 			c := col[i] + strconv.Itoa(k+1)
+
+			// 设置数据格式:float格式
+			// number_format? 参考文档在什么地方呢?
+			// 参考: https://python-pptx.readthedocs.io/en/latest/api/enum/ExcelNumFormat.html
+			// https://xuri.me/excelize/zh-hans/cell.html#SetCellFormula
 			var val float64
 			val, err = strconv.ParseFloat(v, 64)
 			if err != nil {
@@ -648,6 +689,7 @@ func TestSetCellStyleCurrencyNumberFormat(t *testing.T) {
 	})
 }
 
+// go test -v -run "TestSetCellStyleCustomNumberFormat"
 func TestSetCellStyleCustomNumberFormat(t *testing.T) {
 	xlsx := NewFile()
 	xlsx.SetCellValue("Sheet1", "A1", 42920.5)
@@ -1082,7 +1124,7 @@ func TestInsertCol(t *testing.T) {
 			xlsx.SetCellStr("Sheet1", axis, axis)
 		}
 	}
-	xlsx.SetCellHyperLink("Sheet1", "A5", "https://github.com/360EntSecGroup-Skylar/excelize", "External")
+	xlsx.SetCellHyperLink("Sheet1", "A5", "https://github.com/wfxiang08/excelize", "External")
 	xlsx.MergeCell("Sheet1", "A1", "C3")
 	err := xlsx.AutoFilter("Sheet1", "A2", "B2", `{"column":"B","expression":"x != blanks"}`)
 	if !assert.NoError(t, err) {
@@ -1102,7 +1144,7 @@ func TestRemoveCol(t *testing.T) {
 			xlsx.SetCellStr("Sheet1", axis, axis)
 		}
 	}
-	xlsx.SetCellHyperLink("Sheet1", "A5", "https://github.com/360EntSecGroup-Skylar/excelize", "External")
+	xlsx.SetCellHyperLink("Sheet1", "A5", "https://github.com/wfxiang08/excelize", "External")
 	xlsx.SetCellHyperLink("Sheet1", "C5", "https://github.com", "External")
 	xlsx.MergeCell("Sheet1", "A1", "B1")
 	xlsx.MergeCell("Sheet1", "A2", "B2")
@@ -1120,7 +1162,7 @@ func TestInsertRow(t *testing.T) {
 			xlsx.SetCellStr("Sheet1", axis, axis)
 		}
 	}
-	xlsx.SetCellHyperLink("Sheet1", "A5", "https://github.com/360EntSecGroup-Skylar/excelize", "External")
+	xlsx.SetCellHyperLink("Sheet1", "A5", "https://github.com/wfxiang08/excelize", "External")
 	xlsx.InsertRow("Sheet1", -1)
 	xlsx.InsertRow("Sheet1", 4)
 
@@ -1463,7 +1505,7 @@ func TestRemoveRow(t *testing.T) {
 			xlsx.SetCellStr("Sheet1", axis, axis)
 		}
 	}
-	xlsx.SetCellHyperLink("Sheet1", "A5", "https://github.com/360EntSecGroup-Skylar/excelize", "External")
+	xlsx.SetCellHyperLink("Sheet1", "A5", "https://github.com/wfxiang08/excelize", "External")
 	xlsx.RemoveRow("Sheet1", -1)
 	xlsx.RemoveRow("Sheet1", 4)
 	xlsx.MergeCell("Sheet1", "B3", "B5")
@@ -1508,6 +1550,9 @@ func TestConditionalFormat(t *testing.T) {
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
+
+	// https://cxn03651.github.io/write_xlsx/conditional_formatting.html 文本包含
+	// https://xlsxwriter.readthedocs.io/working_with_conditional_formats.html?highlight=mid_type#conditional-format-options
 
 	// Color scales: 2 color.
 	xlsx.SetConditionalFormat("Sheet1", "A1:A10", `[{"type":"2_color_scale","criteria":"=","min_type":"min","max_type":"max","min_color":"#F8696B","max_color":"#63BE7B"}]`)
@@ -1758,7 +1803,7 @@ func prepareTestBook1() (*File, error) {
 
 	// Test add picture to worksheet with offset, external hyperlink and positioning.
 	err = xlsx.AddPicture("Sheet1", "F21", filepath.Join("test", "images", "excel.png"),
-		`{"x_offset": 10, "y_offset": 10, "hyperlink": "https://github.com/360EntSecGroup-Skylar/excelize", "hyperlink_type": "External", "positioning": "oneCell"}`)
+		`{"x_offset": 10, "y_offset": 10, "hyperlink": "https://github.com/wfxiang08/excelize", "hyperlink_type": "External", "positioning": "oneCell"}`)
 	if err != nil {
 		return nil, err
 	}

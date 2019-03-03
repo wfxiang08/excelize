@@ -40,6 +40,7 @@ func TestStyleFill(t *testing.T) {
 	}
 }
 
+// go test -v -run "TestSetConditionalFormat$"
 func TestSetConditionalFormat(t *testing.T) {
 	cases := []struct {
 		label  string
